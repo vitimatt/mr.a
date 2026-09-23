@@ -160,28 +160,68 @@
       document.addEventListener("mouseleave", resetTilt);
     }
 
+    const STATIC_IMAGES = [
+      "/images/image.png",
+      "/images/image.jpg",
+      "/images/image.jpeg",
+      "/images/image.webp",
+      "/images/image.gif",
+    ];
+
+    function showImage(src, cacheBust) {
+      const next = cacheBust ? src + "?t=" + Date.now() : src;
+      if (img.getAttribute("src") !== next) img.src = next;
+      shownSrc = src;
+      img.hidden = false;
+      empty.hidden = true;
+      if (mobile && !gyroOn) hint.hidden = false;
+    }
+
+    function showEmpty() {
+      img.hidden = true;
+      img.removeAttribute("src");
+      shownSrc = "";
+      empty.hidden = false;
+      hint.hidden = true;
+    }
+
+    function probe(src) {
+      return new Promise((resolve) => {
+        const test = new Image();
+        test.onload = () => resolve(true);
+        test.onerror = () => resolve(false);
+        test.src = src;
+      });
+    }
+
+    async function loadStaticImage() {
+      for (const src of STATIC_IMAGES) {
+        if (await probe(src)) {
+          showImage(src, false);
+          return true;
+        }
+      }
+      return false;
+    }
+
     async function loadImage() {
       try {
         const response = await fetch("/api/image", { cache: "no-store" });
-        const data = await response.json();
-        if (!data.src) {
-          img.hidden = true;
-          img.removeAttribute("src");
-          shownSrc = "";
-          empty.hidden = false;
-          hint.hidden = true;
+        const type = response.headers.get("content-type") || "";
+        if (response.ok && type.includes("json")) {
+          const data = await response.json();
+          if (!data.src) {
+            showEmpty();
+            return;
+          }
+          showImage(data.src, true);
           return;
         }
-        if (shownSrc !== data.src) {
-          shownSrc = data.src;
-          img.src = data.src + "?t=" + Date.now();
-        }
-        img.hidden = false;
-        empty.hidden = true;
-        if (mobile && !gyroOn) hint.hidden = false;
       } catch (error) {
-        empty.hidden = false;
+        // Static hosts have no image API.
       }
+
+      if (!(await loadStaticImage())) showEmpty();
     }
 
     loadImage();
