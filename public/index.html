@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Image</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #fff;
+      color: #111;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+    }
+
+    .stage {
+      perspective: 900px;
+      display: grid;
+      place-items: center;
+    }
+
+    img {
+      max-width: 85vw;
+      max-height: 75vh;
+      width: auto;
+      height: auto;
+      display: block;
+      transform-style: preserve-3d;
+      will-change: transform;
+      user-select: none;
+      -webkit-user-drag: none;
+      filter: drop-shadow(0 22px 36px rgba(0, 0, 0, 0.08));
+    }
+
+    body.mobile img {
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .empty {
+      margin: 0;
+      padding: 24px;
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #666;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #111;
+    }
+
+    .hint {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 28px;
+      margin: 0;
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <img id="photo" alt="" hidden>
+    <p class="empty" id="empty">Add <code>images/image.png</code></p>
+  </div>
+  <p class="hint" id="hint" hidden>Tap the image to enable motion</p>
+  <script>
+    const img = document.getElementById("photo");
+    const empty = document.getElementById("empty");
+    const hint = document.getElementById("hint");
+    const mobile = window.matchMedia("(pointer: coarse)").matches;
+
+    const MAX = 16;
+    let targetX = 0;
+    let targetY = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let gyroOn = false;
+    let baseBeta = null;
+    let baseGamma = null;
+    let shownSrc = "";
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function tick() {
+      currentX += (targetX - currentX) * 0.12;
+      currentY += (targetY - currentY) * 0.12;
+      img.style.transform =
+        "rotateX(" + currentX.toFixed(2) + "deg) rotateY(" + currentY.toFixed(2) + "deg)";
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    function onMouse(event) {
+      const nx = (event.clientX / window.innerWidth) * 2 - 1;
+      const ny = (event.clientY / window.innerHeight) * 2 - 1;
+      targetY = nx * MAX;
+      targetX = -ny * MAX;
+    }
+
+    function resetTilt() {
+      targetX = 0;
+      targetY = 0;
+    }
+
+    function onOrientation(event) {
+      if (event.beta == null || event.gamma == null) return;
+      if (baseBeta == null) {
+        baseBeta = event.beta;
+        baseGamma = event.gamma;
+      }
+      const tiltY = clamp(event.gamma - baseGamma, -28, 28);
+      const tiltX = clamp(event.beta - baseBeta, -28, 28);
+      targetY = (tiltY / 28) * MAX;
+      targetX = (-tiltX / 28) * MAX;
+    }
+
+    async function enableGyro() {
+      if (gyroOn) return;
+      try {
+        const Orientation = window.DeviceOrientationEvent;
+        if (Orientation && typeof Orientation.requestPermission === "function") {
+          const state = await Orientation.requestPermission();
+          if (state !== "granted") {
+            hint.textContent = "Motion permission denied";
+            hint.hidden = false;
+            return;
+          }
+        }
+        baseBeta = null;
+        baseGamma = null;
+        window.addEventListener("deviceorientation", onOrientation);
+        gyroOn = true;
+        hint.hidden = true;
+      } catch (error) {
+        hint.textContent = "Motion needs a secure page (https)";
+        hint.hidden = false;
+      }
+    }
+
+    if (mobile) {
+      document.body.classList.add("mobile");
+      img.addEventListener("click", enableGyro);
+    } else {
+      window.addEventListener("mousemove", onMouse);
+      document.addEventListener("mouseleave", resetTilt);
+    }
+
+    async function loadImage() {
+      try {
+        const response = await fetch("/api/image", { cache: "no-store" });
+        const data = await response.json();
+        if (!data.src) {
+          img.hidden = true;
+          img.removeAttribute("src");
+          shownSrc = "";
+          empty.hidden = false;
+          hint.hidden = true;
+          return;
+        }
+        if (shownSrc !== data.src) {
+          shownSrc = data.src;
+          img.src = data.src + "?t=" + Date.now();
+        }
+        img.hidden = false;
+        empty.hidden = true;
+        if (mobile && !gyroOn) hint.hidden = false;
+      } catch (error) {
+        empty.hidden = false;
+      }
+    }
+
+    loadImage();
+    setInterval(loadImage, 1500);
+  </script>
+</body>
+</html>
