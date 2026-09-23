@@ -125,8 +125,8 @@
       }
       const tiltY = clamp(event.gamma - baseGamma, -28, 28);
       const tiltX = clamp(event.beta - baseBeta, -28, 28);
-      targetY = (tiltY / 28) * MAX;
-      targetX = (-tiltX / 28) * MAX;
+      targetY = (tiltY / 28) * MAX * 3;
+      targetX = (-tiltX / 28) * MAX * 3;
     }
 
     async function enableGyro() {
