@@ -2,17 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
   <title>Image</title>
   <style>
     html, body {
       margin: 0;
+      width: 100%;
       height: 100%;
+      max-width: 100%;
       background: #fff;
       color: #000;
+      overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
 
     body {
+      position: fixed;
+      inset: 0;
       display: grid;
       place-items: center;
       overflow: hidden;
@@ -32,6 +39,7 @@
 
     .stage {
       position: relative;
+      max-width: 85%;
       perspective: 900px;
       display: grid;
       place-items: center;
@@ -94,13 +102,15 @@
 
     .rsvp-form {
       position: absolute;
-      top: 50%;
+      top: 0;
+      bottom: 0;
       left: 0;
-      transform: translateY(-50%);
       width: max-content;
-      max-width: calc(100vw - 48px);
+      max-width: calc(100% - 32px);
+      margin: 0;
       display: flex;
       flex-direction: column;
+      justify-content: center;
       align-items: flex-start;
       line-height: 1.2;
     }
@@ -116,7 +126,9 @@
     }
 
     .rsvp-form input {
-      width: 100%;
+      width: 12em;
+      max-width: 100%;
+      min-width: 0;
       font: inherit;
       font-size: 16px;
       letter-spacing: inherit;
@@ -128,6 +140,7 @@
       padding: 0;
       margin: 0 0 14px;
       outline: none;
+      touch-action: manipulation;
     }
 
     .rsvp-form input::placeholder {
@@ -158,8 +171,8 @@
     }
 
     img {
-      max-width: 85vw;
-      max-height: 75vh;
+      max-width: 100%;
+      max-height: 75dvh;
       width: auto;
       height: auto;
       display: block;
@@ -377,8 +390,20 @@
     }
 
     function alignForm() {
-      rsvpForm.style.left = stage.getBoundingClientRect().left + "px";
+      const left = Math.max(0, stage.getBoundingClientRect().left);
+      rsvpForm.style.left = left + "px";
+      rsvpForm.style.maxWidth = Math.max(120, window.innerWidth - left - 16) + "px";
     }
+
+    function resetViewport() {
+      window.scrollTo(0, 0);
+    }
+
+    rsvpForm.addEventListener("focusin", resetViewport);
+    rsvpForm.addEventListener("focusout", () => {
+      resetViewport();
+      setTimeout(resetViewport, 80);
+    });
 
     window.addEventListener("resize", alignForm);
 
