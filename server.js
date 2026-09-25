@@ -8,7 +8,7 @@ const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, "public");
 const IMAGES = path.join(ROOT, "images");
 
-const IMAGE_NAMES = ["image.png", "image.jpg", "image.jpeg", "image.webp", "image.gif"];
+const IMAGE_NAMES = ["image.jpg", "image.jpeg", "image.webp", "image.gif"];
 
 const TYPES = {
   ".png": "image/png",

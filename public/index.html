@@ -17,7 +17,7 @@
       place-items: center;
       overflow: hidden;
       font-family: Helvetica;
-      font-size: 14px;
+      font-size: 16px;
       font-style: normal;
       font-weight: 400;
       line-height: 45px; /* 225% */
@@ -35,6 +35,13 @@
       perspective: 900px;
       display: grid;
       place-items: center;
+      opacity: 1;
+      transition: opacity 0.7s ease;
+    }
+
+    .stage.fade-out {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .caption {
@@ -72,9 +79,13 @@
       position: fixed;
       inset: 0;
       z-index: 2;
-      display: grid;
-      place-items: center;
       background: #fff;
+      opacity: 0;
+      transition: opacity 0.7s ease;
+    }
+
+    .form-layer.is-in {
+      opacity: 1;
     }
 
     .form-layer[hidden] {
@@ -82,6 +93,10 @@
     }
 
     .rsvp-form {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
       width: max-content;
       max-width: calc(100vw - 48px);
       display: flex;
@@ -103,6 +118,7 @@
     .rsvp-form input {
       width: 100%;
       font: inherit;
+      font-size: 16px;
       letter-spacing: inherit;
       color: inherit;
       line-height: 1.2;
@@ -169,39 +185,29 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       color: #111;
     }
-
-    .hint {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 28px;
-      margin: 0;
-      text-align: center;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
   <div class="stage">
     <img id="photo" alt="" hidden>
-    <p class="empty" id="empty">Add <code>images/image.png</code></p>
+    <p class="empty" id="empty">Add <code>images/image.jpg</code></p>
     <div class="caption" id="caption" hidden><span>made by mr.a<sup>®</sup></span><button type="button" class="rsvp" id="rsvp">RSVP</button></div>
   </div>
   <div class="form-layer" id="form-layer" hidden>
     <form class="rsvp-form" id="rsvp-form">
       <p class="form-mark">made by mr.a<sup>®</sup></p>
       <input type="email" name="email" placeholder="Email" aria-label="Email" autocomplete="email" required>
-      <input type="text" name="full_name" placeholder="Name" aria-label="Name" autocomplete="name" required>
+      <input type="text" name="name" placeholder="Name" aria-label="Name" autocomplete="given-name" required>
+      <input type="text" name="surname" placeholder="Surname" aria-label="Surname" autocomplete="family-name" required>
       <input type="text" name="instagram" placeholder="Instagram" aria-label="Instagram" autocomplete="username" required>
       <button type="submit">Submit</button>
       <p class="form-status" id="form-status"></p>
     </form>
   </div>
-  <p class="hint" id="hint" hidden>Tap the image to enable motion</p>
   <script>
     const img = document.getElementById("photo");
     const empty = document.getElementById("empty");
-    const hint = document.getElementById("hint");
+    const stage = document.querySelector(".stage");
     const caption = document.getElementById("caption");
     const rsvp = document.getElementById("rsvp");
     const formLayer = document.getElementById("form-layer");
@@ -264,21 +270,13 @@
         const Orientation = window.DeviceOrientationEvent;
         if (Orientation && typeof Orientation.requestPermission === "function") {
           const state = await Orientation.requestPermission();
-          if (state !== "granted") {
-            hint.textContent = "Motion permission denied";
-            hint.hidden = false;
-            return;
-          }
+          if (state !== "granted") return;
         }
         baseBeta = null;
         baseGamma = null;
         window.addEventListener("deviceorientation", onOrientation);
         gyroOn = true;
-        hint.hidden = true;
-      } catch (error) {
-        hint.textContent = "Motion needs a secure page (https)";
-        hint.hidden = false;
-      }
+      } catch (error) {}
     }
 
     if (mobile) {
@@ -290,7 +288,6 @@
     }
 
     const STATIC_IMAGES = [
-      "/images/image.png",
       "/images/image.jpg",
       "/images/image.jpeg",
       "/images/image.webp",
@@ -313,7 +310,6 @@
         img.hidden = false;
         empty.hidden = true;
         caption.hidden = false;
-        if (mobile && !gyroOn) hint.hidden = false;
         reveal();
       };
       preload.src = next;
@@ -325,7 +321,6 @@
       shownSrc = "";
       empty.hidden = false;
       caption.hidden = true;
-      hint.hidden = true;
       reveal();
     }
 
@@ -368,25 +363,62 @@
       if (!(await loadStaticImage())) showEmpty();
     }
 
-    function openForm() {
-      formStatus.textContent = "";
-      formLayer.hidden = false;
-      const first = rsvpForm.querySelector("input");
-      if (first) first.focus();
+    const FADE_MS = 700;
+    let transitioning = false;
+
+    function wait(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
-    function closeForm() {
+    function nextFrame() {
+      return new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      });
+    }
+
+    function alignForm() {
+      rsvpForm.style.left = stage.getBoundingClientRect().left + "px";
+    }
+
+    window.addEventListener("resize", alignForm);
+
+    async function openForm() {
+      if (transitioning || !formLayer.hidden) return;
+      transitioning = true;
+      formStatus.textContent = "";
+      alignForm();
+      stage.classList.add("fade-out");
+      await wait(FADE_MS);
+      formLayer.hidden = false;
+      await nextFrame();
+      formLayer.classList.add("is-in");
+      await wait(FADE_MS);
+      transitioning = false;
+    }
+
+    async function returnHome() {
+      if (transitioning || formLayer.hidden) return;
+      transitioning = true;
+      formLayer.classList.remove("is-in");
+      await wait(FADE_MS);
       formLayer.hidden = true;
+      rsvpForm.reset();
+      formStatus.textContent = "";
+      const submit = rsvpForm.querySelector("button");
+      submit.disabled = false;
+      stage.classList.remove("fade-out");
+      await wait(FADE_MS);
+      transitioning = false;
     }
 
     rsvp.addEventListener("click", openForm);
 
     formLayer.addEventListener("click", (event) => {
-      if (event.target === formLayer) closeForm();
+      if (event.target === formLayer) returnHome();
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !formLayer.hidden) closeForm();
+      if (event.key === "Escape") returnHome();
     });
 
     rsvpForm.addEventListener("submit", async (event) => {
@@ -410,16 +442,15 @@
           },
           body: JSON.stringify({
             email: String(data.get("email") || "").trim(),
-            full_name: String(data.get("full_name") || "").trim(),
+            name: String(data.get("name") || "").trim(),
+            surname: String(data.get("surname") || "").trim(),
             instagram: String(data.get("instagram") || "").trim(),
           }),
         });
         if (!response.ok) throw new Error("request failed");
-        rsvpForm.reset();
-        formStatus.textContent = "Sent";
+        await returnHome();
       } catch (error) {
         formStatus.textContent = "Could not send. Try again.";
-      } finally {
         submit.disabled = false;
       }
     });
