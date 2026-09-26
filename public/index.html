@@ -209,9 +209,9 @@
   <div class="form-layer" id="form-layer" hidden>
     <form class="rsvp-form" id="rsvp-form">
       <p class="form-mark">made by mr.a<sup>®</sup></p>
-      <input type="email" name="email" placeholder="Email" aria-label="Email" autocomplete="email" required>
-      <input type="text" name="name" placeholder="Name" aria-label="Name" autocomplete="given-name" required>
-      <input type="text" name="surname" placeholder="Surname" aria-label="Surname" autocomplete="family-name" required>
+      <input type="text" name="name" placeholder="Name*" aria-label="Name" autocomplete="given-name" required>
+      <input type="text" name="surname" placeholder="Surname*" aria-label="Surname" autocomplete="family-name" required>
+      <input type="email" name="email" placeholder="Email*" aria-label="Email" autocomplete="email" required>
       <input type="text" name="instagram" placeholder="Instagram" aria-label="Instagram" autocomplete="username">
       <button type="submit">Submit</button>
       <p class="form-status" id="form-status"></p>
@@ -438,12 +438,44 @@
 
     rsvp.addEventListener("click", openForm);
 
-    formLayer.addEventListener("click", (event) => {
-      if (event.target === formLayer) returnHome();
+    const instagramInput = rsvpForm.querySelector('[name="instagram"]');
+
+    function instagramHandle(value) {
+      return String(value || "").trim().replace(/^@+/, "").replace(/\s+/g, "");
+    }
+
+    function withAt(value) {
+      const handle = instagramHandle(value);
+      return handle ? "@" + handle : "@";
+    }
+
+    instagramInput.addEventListener("focus", () => {
+      if (!instagramInput.value) instagramInput.value = "@";
+      const end = instagramInput.value.length;
+      requestAnimationFrame(() => instagramInput.setSelectionRange(end, end));
     });
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") returnHome();
+    instagramInput.addEventListener("blur", () => {
+      if (!instagramHandle(instagramInput.value)) instagramInput.value = "";
+    });
+
+    instagramInput.addEventListener("keydown", (event) => {
+      const start = instagramInput.selectionStart || 0;
+      const end = instagramInput.selectionEnd || 0;
+      const atPrefix = start <= 1 && end <= 1;
+      if (atPrefix && (event.key === "Backspace" || event.key === "Delete" || event.key === "ArrowLeft")) {
+        event.preventDefault();
+      }
+    });
+
+    instagramInput.addEventListener("input", () => {
+      const start = instagramInput.selectionStart || 0;
+      const next = withAt(instagramInput.value);
+      if (instagramInput.value === next) return;
+      const shift = next.length - instagramInput.value.length;
+      instagramInput.value = next;
+      const pos = Math.max(1, start + shift);
+      instagramInput.setSelectionRange(pos, pos);
     });
 
     rsvpForm.addEventListener("submit", async (event) => {
@@ -469,7 +501,7 @@
             email: String(data.get("email") || "").trim(),
             name: String(data.get("name") || "").trim(),
             surname: String(data.get("surname") || "").trim(),
-            instagram: String(data.get("instagram") || "").trim(),
+            instagram: instagramHandle(data.get("instagram")) ? withAt(data.get("instagram")) : "",
           }),
         });
         if (!response.ok) throw new Error("request failed");
