@@ -143,6 +143,16 @@
       touch-action: manipulation;
     }
 
+    @media (pointer: coarse), (max-width: 800px) {
+      .rsvp-form {
+        align-items: stretch;
+      }
+
+      .rsvp-form input {
+        width: 100%;
+      }
+    }
+
     .rsvp-form input::placeholder {
       color: #000;
       opacity: 1;
@@ -229,6 +239,7 @@
     const SUPABASE_URL = "https://dzhilxtzefnoxjtarmzy.supabase.co";
     const SUPABASE_KEY = "sb_publishable_2jYCwrMuznGZqYlfat6JwQ_378lev-4";
     const mobile = window.matchMedia("(pointer: coarse)").matches;
+    const phone = window.matchMedia("(pointer: coarse), (max-width: 800px)").matches;
 
     const MAX = 16;
     let targetX = 0;
@@ -391,8 +402,17 @@
 
     function alignForm() {
       const left = Math.max(0, stage.getBoundingClientRect().left);
-      rsvpForm.style.left = left + "px";
-      rsvpForm.style.maxWidth = Math.max(120, window.innerWidth - left - 16) + "px";
+      if (!phone) {
+        rsvpForm.style.left = left + "px";
+        rsvpForm.style.width = "";
+        rsvpForm.style.maxWidth = Math.max(120, window.innerWidth - left - 16) + "px";
+        return;
+      }
+      const margin = Math.max(16, left);
+      const width = Math.max(120, window.innerWidth - margin * 2);
+      rsvpForm.style.left = margin + "px";
+      rsvpForm.style.width = width + "px";
+      rsvpForm.style.maxWidth = width + "px";
     }
 
     function resetViewport() {
