@@ -145,11 +145,19 @@
 
     @media (pointer: coarse), (max-width: 800px) {
       .rsvp-form {
-        align-items: stretch;
+        left: 24px;
+        right: 24px;
+        width: auto;
+        max-width: none;
       }
 
       .rsvp-form input {
         width: 100%;
+      }
+
+      .rsvp-form button {
+        align-self: flex-start;
+        text-align: left;
       }
     }
 
@@ -401,18 +409,16 @@
     }
 
     function alignForm() {
-      const left = Math.max(0, stage.getBoundingClientRect().left);
-      if (!phone) {
-        rsvpForm.style.left = left + "px";
+      if (phone) {
+        rsvpForm.style.left = "";
         rsvpForm.style.width = "";
-        rsvpForm.style.maxWidth = Math.max(120, window.innerWidth - left - 16) + "px";
+        rsvpForm.style.maxWidth = "";
         return;
       }
-      const margin = Math.max(16, left);
-      const width = Math.max(120, window.innerWidth - margin * 2);
-      rsvpForm.style.left = margin + "px";
-      rsvpForm.style.width = width + "px";
-      rsvpForm.style.maxWidth = width + "px";
+      const left = Math.max(0, stage.getBoundingClientRect().left);
+      rsvpForm.style.left = left + "px";
+      rsvpForm.style.width = "";
+      rsvpForm.style.maxWidth = Math.max(120, window.innerWidth - left - 16) + "px";
     }
 
     function resetViewport() {
