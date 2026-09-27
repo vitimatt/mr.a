@@ -179,6 +179,35 @@
       opacity: 1;
     }
 
+    .form-fade {
+      transition: opacity 0.7s ease;
+    }
+
+    .rsvp-form.is-sent .form-fade {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .form-action {
+      position: relative;
+      margin: 38px 0 0;
+    }
+
+    .thanks {
+      position: absolute;
+      left: 0;
+      top: 0;
+      margin: 0;
+      opacity: 0;
+      white-space: nowrap;
+      pointer-events: none;
+      transition: opacity 0.7s ease;
+    }
+
+    .rsvp-form.is-thanks .thanks {
+      opacity: 1;
+    }
+
     .rsvp-form button:hover {
       color: red;
     }
@@ -192,7 +221,7 @@
       background: none;
       border: 0;
       padding: 0;
-      margin: 38px 0 0;
+      margin: 0;
       cursor: pointer;
     }
 
@@ -244,11 +273,14 @@
   <div class="form-layer" id="form-layer" hidden>
     <form class="rsvp-form" id="rsvp-form">
       <p class="form-mark">made by mr.a<sup>®</sup></p>
-      <input type="text" name="name" placeholder="Name*" aria-label="Name" autocomplete="given-name" required>
-      <input type="text" name="surname" placeholder="Surname*" aria-label="Surname" autocomplete="family-name" required>
-      <input type="email" name="email" placeholder="Email*" aria-label="Email" autocomplete="email" required>
-      <input type="text" name="instagram" placeholder="Instagram" aria-label="Instagram" autocomplete="username">
-      <button type="submit">Submit</button>
+      <input class="form-fade" type="text" name="name" placeholder="Name*" aria-label="Name" autocomplete="given-name" required>
+      <input class="form-fade" type="text" name="surname" placeholder="Surname*" aria-label="Surname" autocomplete="family-name" required>
+      <input class="form-fade" type="email" name="email" placeholder="Email*" aria-label="Email" autocomplete="email" required>
+      <input class="form-fade" type="text" name="instagram" placeholder="Instagram" aria-label="Instagram" autocomplete="username">
+      <div class="form-action">
+        <button class="form-fade" type="submit">Submit</button>
+        <p class="thanks">Thank you. See you soon.</p>
+      </div>
       <p class="form-status" id="form-status"></p>
     </form>
   </div>
@@ -471,6 +503,7 @@
       await wait(FADE_MS);
       formLayer.hidden = true;
       rsvpForm.reset();
+      rsvpForm.classList.remove("is-sent", "is-thanks");
       formStatus.textContent = "";
       const submit = rsvpForm.querySelector("button");
       submit.disabled = false;
@@ -548,6 +581,10 @@
           }),
         });
         if (!response.ok) throw new Error("request failed");
+        rsvpForm.classList.add("is-sent");
+        await wait(FADE_MS);
+        rsvpForm.classList.add("is-thanks");
+        await wait(FADE_MS + 1400);
         await returnHome();
       } catch (error) {
         formStatus.textContent = "Could not send. Try again.";
